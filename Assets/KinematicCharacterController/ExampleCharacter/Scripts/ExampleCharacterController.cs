@@ -8,7 +8,7 @@ namespace KinematicCharacterController.Examples
 {
     public enum CharacterState
     {
-        Default, Rooting
+        Default, Rooting, Attacking
     }
 
     public enum OrientationMethod
@@ -26,6 +26,7 @@ namespace KinematicCharacterController.Examples
         public bool CrouchDown;
         public bool CrouchUp;
         public bool Root;
+        public bool Attack;
     }
 
     public struct AICharacterInputs
@@ -71,6 +72,8 @@ namespace KinematicCharacterController.Examples
         public Transform MeshRoot;
         public Transform CameraFollowPoint;
         public float CrouchedCapsuleHeight = 1f;
+        [SerializeField] private GameObject attackHitbox;
+        
         
         public CharacterState CurrentCharacterState { get; private set; }
 
@@ -99,6 +102,7 @@ namespace KinematicCharacterController.Examples
             // Assign the characterController to the motor
             Motor.CharacterController = this;
             animator = GetComponent<Animator>();
+            attackHitbox.SetActive(false);
         }
 
         /// <summary>
@@ -204,6 +208,14 @@ namespace KinematicCharacterController.Examples
                             CurrentCharacterState = CharacterState.Rooting;
                             canMove = false;
                         }
+                        
+                        if (inputs.Attack)
+                        {
+                            animator.SetTrigger("Attack");
+                            attackHitbox.SetActive(true);
+                            CurrentCharacterState = CharacterState.Attacking;
+                            canMove = false;
+                        }
                    
                         break;
                     }
@@ -215,6 +227,13 @@ namespace KinematicCharacterController.Examples
             //canTakeDamage = on
             CurrentCharacterState = CharacterState.Default;
             canMove = true;
+        }
+        
+        public void endAttack()
+        {
+            CurrentCharacterState = CharacterState.Default;
+            canMove = true;
+            attackHitbox.SetActive(false);
         }
         /// <summary>
         /// This is called every frame by the AI script in order to tell the character what its inputs are
@@ -407,6 +426,19 @@ namespace KinematicCharacterController.Examples
                 case CharacterState.Rooting:
                     currentVelocity = Vector3.zero;
                     break;
+                
+                case CharacterState.Attacking:
+                    currentVelocity = Vector3.zero;
+                    break;
+            }
+
+            if (currentVelocity.magnitude >= 0.1f)
+            {
+                animator.SetBool("IsMoving", true);
+            }
+            else
+            {
+                animator.SetBool("IsMoving", false);
             }
         }
 

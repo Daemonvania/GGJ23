@@ -18,9 +18,11 @@ public class RabbitAI : MonoBehaviour
 
 
     private int timesAttacked = 0;
+
+    private float initRabbitHealth;
     enum RabbitState
     {
-        Default, Charging
+        Default, Charging, Stunned
     }
 
     private RabbitState currentRabbitState;
@@ -40,15 +42,23 @@ public class RabbitAI : MonoBehaviour
     [SerializeField] float maxChargeWait = 6;
     private bool isCharging = false;
     [SerializeField] float chargeSpeed = 1;
+    [SerializeField] private Transform fallPos;
+    private CapsuleCollider capsuleCollider;
+    public GameObject hitbox;
+
+    private RabbitHealth rabbitHealth;
 
     private void Awake()
     {
         navMeshAgent = GetComponent<NavMeshAgent>();
+        rabbitHealth = GetComponent <RabbitHealth>();
         player = GameObject.FindWithTag("Player").transform;
         animator = GetComponent<Animator>();
         initNavMeshSpeed = navMeshAgent.speed;
+        capsuleCollider = GetComponent<CapsuleCollider>();
         initNavMeshStoppingDist = navMeshAgent.stoppingDistance;
         initNavMeshAccelerationt = navMeshAgent.acceleration;
+        hitbox.SetActive(false);
     }
 
     // Start is called before the first frame update
@@ -79,16 +89,27 @@ public class RabbitAI : MonoBehaviour
                 }
                 else if (isCharging)
                 {
-                    navMeshAgent.speed = chargeSpeed;
-                    navMeshAgent.stoppingDistance = 0;
-                   // navMeshAgent.angularSpeed = 0.1f;
-                    navMeshAgent.SetDestination(endChargePos.position);
-                    navMeshAgent.acceleration = 100;
-                   
-                   StartCoroutine(LowerAcceleration());
+           
                 }
                 break;
+            case RabbitState.Stunned:
+                if (rabbitHealth.health <= initRabbitHealth - 30)
+                {
+                    ExitStun();
+                }
+                
+                break;
         }
+
+        void ExitStun()
+        {
+            rabbitHealth.canTakeDamage = false;
+            currentRabbitState = RabbitState.Default;
+            navMeshAgent.speed = initNavMeshSpeed;
+            navMeshAgent.stoppingDistance = initNavMeshStoppingDist;
+            navMeshAgent.acceleration = initNavMeshAccelerationt;
+            timesAttacked = 0;
+        } 
         
         
         //TODO Remove, dev tools
@@ -99,11 +120,7 @@ public class RabbitAI : MonoBehaviour
         
     }
 
-    IEnumerator LowerAcceleration()
-    {
-        yield return new WaitForSeconds(0.1f);
-        navMeshAgent.acceleration = 0.1f;
-    }
+    
     IEnumerator WaitToCharge()
     {
         yield return new WaitForSeconds(Random.Range(minChargeWait, maxChargeWait + 1));
@@ -113,11 +130,30 @@ public class RabbitAI : MonoBehaviour
     //called by animation event
     public void Charge()
     {
-        print("chargin");
-        isReadyToCharge = true;
-        isCharging = true;
+        isReadyToCharge = false;    
+        navMeshAgent.speed = chargeSpeed;
+        navMeshAgent.stoppingDistance = 0;
+        // navMeshAgent.angularSpeed = 0.1f;
+        navMeshAgent.SetDestination(endChargePos.position);
+        capsuleCollider.enabled = false;
+        navMeshAgent.acceleration = 300;
+        hitbox.SetActive(true);
+        isCharging = false;
+        StartCoroutine(endCharge());
+    }
 
-    } 
+
+
+    IEnumerator endCharge()
+    {
+        yield return new WaitForSeconds(0.5f);
+        navMeshAgent.speed = initNavMeshSpeed;
+        navMeshAgent.stoppingDistance = initNavMeshStoppingDist;
+        navMeshAgent.acceleration = initNavMeshAccelerationt;
+        capsuleCollider.enabled = true;
+        isCharging = false;
+        currentRabbitState = RabbitState.Default;
+    }
     void RabbitNormal()
     {
         if (!canAttack) {return;}
@@ -129,6 +165,7 @@ public class RabbitAI : MonoBehaviour
         }
     }
 
+    //TODO actually fix attack with hitbox
     void Attack()
     {
         canAttack = false;
@@ -154,5 +191,29 @@ public class RabbitAI : MonoBehaviour
         }
 
         print(timesAttacked);
+    }
+    
+    private void OnTriggerEnter(Collider other)
+    {
+        print(other.name);
+        
+        if (currentRabbitState == RabbitState.Charging)
+        {
+            //OnHitLog
+            if (other.CompareTag("Log"))
+            {
+                Destroy(other.gameObject);
+                print("hitLog");
+                StopAllCoroutines();
+                animator.SetBool("stunned", true);
+                hitbox.SetActive(false);
+                initRabbitHealth = rabbitHealth.health;
+                capsuleCollider.enabled = true;
+                navMeshAgent.velocity = Vector3.zero;
+                navMeshAgent.SetDestination(fallPos.position);
+                currentRabbitState = RabbitState.Stunned;
+                rabbitHealth.canTakeDamage = true;
+            }
+        }
     }
 }

@@ -20,6 +20,7 @@ public class PlayerHealth : MonoBehaviour
         if (other.CompareTag("EnemyAttackHitbox"))
         {
             health--;
+            print(other.name);
         }
 
         if (health <= 0)

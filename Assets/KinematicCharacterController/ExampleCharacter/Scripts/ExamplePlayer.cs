@@ -92,6 +92,7 @@ namespace KinematicCharacterController.Examples
             characterInputs.CrouchDown = Input.GetKeyDown(KeyCode.C);
             characterInputs.CrouchUp = Input.GetKeyUp(KeyCode.C);
             characterInputs.Root = Input.GetKeyDown(KeyCode.Space);
+            characterInputs.Attack = Input.GetKeyDown(KeyCode.Mouse0);
             // Apply inputs to character
             Character.SetInputs(ref characterInputs);
         }

@@ -1,11 +1,14 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 
 
     public class RabbitHealth : MonoBehaviour
     {
         public float maxHealth = 100;
 
-        private float health;
+        public float health;
+
+        public bool canTakeDamage = false;
         // Start is called before the first frame update
         void Start()
         {
@@ -15,9 +18,16 @@
         // Update is called once per frame
         private void OnTriggerEnter(Collider other)
         {
+            if (!canTakeDamage)
+            {
+                return;
+            }
             if (other.CompareTag("PlayerAttackHitbox"))
             {
-                health--;
+                health -= 10;
+                print("enemyTakeDamage");
+                canTakeDamage = false;
+                StartCoroutine(enableDamage());
             }
 
             if (health <= 50)
@@ -30,5 +40,11 @@
                 //DEath
                 Destroy(gameObject);
             }
+        }
+
+        private IEnumerator enableDamage()
+        {
+            yield return new WaitForSeconds(0.3f);
+            canTakeDamage = true;
         }
     }
